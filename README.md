@@ -11,7 +11,7 @@ The goal of this portfolio is to showcase practical automation solutions commonl
 - Gmail API
 - Google Sheets
 - PDF generation APIs
-- Slack integrations (coming soon)
+- Slack integrations
 
 ---
 
