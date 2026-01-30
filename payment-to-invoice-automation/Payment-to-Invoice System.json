@@ -1,0 +1,832 @@
+{
+  "name": "Payment-to-Invoice System",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "WEBHOOK INTAKE",
+        "height": 560,
+        "width": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2688,
+        -656
+      ],
+      "id": "f38e8fb0-8220-4089-b594-9c0724969bec",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "stripe-payment",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2624,
+        -448
+      ],
+      "id": "8eadfad7-f09c-4137-be69-f537daf32d2d",
+      "name": "Receive Stripe Payment",
+      "webhookId": "1d66788d-ee8f-4afa-9bc3-59da6be2f223"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get Stripe event data\nconst stripeEvent = $input.first().json.body;\n\n// Extract payment information\nconst paymentIntent = stripeEvent.data.object;\n\n// Create clean payment object\nconst payment = {\n  // IDs\n  payment_id: paymentIntent.id,\n  invoice_number: `INV-${Date.now()}`, // Simple invoice number\n  \n  // Customer info\n  customer_name: paymentIntent.billing_details?.name || 'Customer',\n  customer_email: paymentIntent.billing_details?.email || paymentIntent.receipt_email || 'no-email@example.com',\n  \n  // Payment details\n  amount: paymentIntent.amount / 100, // Stripe uses cents\n  currency: paymentIntent.currency.toUpperCase(),\n  description: paymentIntent.description || 'Payment for services',\n  \n  // Metadata\n  payment_method: paymentIntent.payment_method_types?.[0] || 'card',\n  status: paymentIntent.status,\n  payment_date: new Date(paymentIntent.created * 1000).toISOString(),\n  \n  // For display\n  formatted_amount: `${paymentIntent.currency.toUpperCase()} ${(paymentIntent.amount / 100).toFixed(2)}`,\n  formatted_date: new Date(paymentIntent.created * 1000).toLocaleDateString('en-US', {\n    year: 'numeric',\n    month: 'long',\n    day: 'numeric'\n  })\n};\n\nreturn { json: payment };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2432,
+        -448
+      ],
+      "id": "e135d9cf-11ed-4483-8eb7-56add12cebe6",
+      "name": "Parse Payment Data"
+    },
+    {
+      "parameters": {
+        "content": "PDF GENERATION",
+        "height": 560,
+        "width": 704,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2288,
+        -656
+      ],
+      "id": "85d90a9b-0265-4f6a-ae24-780291bed67d",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const payment = $json;\n\n// ⚠️ CUSTOMIZE THESE WITH YOUR DETAILS!\nconst companyName = \"AUTOLUIS\";\nconst companyAddress = \"Rizal Philippines\";\nconst companyCityState = \"Cainta\";\nconst companyEmail = \"luistonidoisko8@gmail.com\";\nconst companyPhone = \"+0123456789\";\n\n// Build professional invoice HTML\nconst invoiceHTML = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <style>\n    body {\n      font-family: Arial, sans-serif;\n      margin: 0;\n      padding: 40px;\n      color: #333;\n    }\n    .invoice-container {\n      max-width: 800px;\n      margin: 0 auto;\n      border: 2px solid #0066cc;\n      padding: 40px;\n    }\n    .header {\n      display: flex;\n      justify-content: space-between;\n      border-bottom: 3px solid #0066cc;\n      padding-bottom: 20px;\n      margin-bottom: 30px;\n    }\n    .company-info h1 {\n      margin: 0 0 10px 0;\n      color: #0066cc;\n      font-size: 28px;\n    }\n    .company-info p {\n      margin: 3px 0;\n      font-size: 14px;\n      color: #666;\n    }\n    .invoice-title {\n      text-align: right;\n    }\n    .invoice-title h2 {\n      margin: 0;\n      font-size: 36px;\n      color: #0066cc;\n    }\n    .invoice-title p {\n      margin: 5px 0;\n      font-size: 14px;\n    }\n    .info-section {\n      display: flex;\n      justify-content: space-between;\n      margin: 30px 0;\n    }\n    .bill-to h3, .invoice-details h3 {\n      margin: 0 0 10px 0;\n      color: #0066cc;\n      font-size: 16px;\n      text-transform: uppercase;\n    }\n    .bill-to p, .invoice-details p {\n      margin: 5px 0;\n      font-size: 14px;\n    }\n    .items-table {\n      width: 100%;\n      border-collapse: collapse;\n      margin: 30px 0;\n    }\n    .items-table th {\n      background-color: #0066cc;\n      color: white;\n      padding: 12px;\n      text-align: left;\n      font-size: 14px;\n    }\n    .items-table td {\n      padding: 12px;\n      border-bottom: 1px solid #ddd;\n      font-size: 14px;\n    }\n    .total-section {\n      text-align: right;\n      margin-top: 20px;\n    }\n    .total-row {\n      display: flex;\n      justify-content: flex-end;\n      padding: 8px 0;\n      font-size: 14px;\n    }\n    .total-row.grand-total {\n      border-top: 2px solid #0066cc;\n      margin-top: 10px;\n      padding-top: 15px;\n    }\n    .total-row .label {\n      width: 150px;\n      text-align: right;\n      padding-right: 20px;\n      font-weight: bold;\n    }\n    .total-row .amount {\n      width: 150px;\n      text-align: right;\n    }\n    .grand-total .label,\n    .grand-total .amount {\n      font-size: 18px;\n      color: #0066cc;\n      font-weight: bold;\n    }\n    .footer {\n      margin-top: 50px;\n      padding-top: 20px;\n      border-top: 2px solid #0066cc;\n      text-align: center;\n      font-size: 12px;\n      color: #666;\n    }\n    .thank-you {\n      font-size: 16px;\n      color: #0066cc;\n      font-weight: bold;\n      margin-bottom: 10px;\n    }\n  </style>\n</head>\n<body>\n  <div class=\"invoice-container\">\n    <div class=\"header\">\n      <div class=\"company-info\">\n        <h1>${companyName}</h1>\n        <p>${companyAddress}</p>\n        <p>${companyCityState}</p>\n        <p>Email: ${companyEmail}</p>\n        <p>Phone: ${companyPhone}</p>\n      </div>\n      <div class=\"invoice-title\">\n        <h2>INVOICE</h2>\n        <p><strong>Invoice #:</strong> ${payment.invoice_number}</p>\n        <p><strong>Date:</strong> ${payment.formatted_date}</p>\n      </div>\n    </div>\n\n    <div class=\"info-section\">\n      <div class=\"bill-to\">\n        <h3>Bill To:</h3>\n        <p><strong>${payment.customer_name}</strong></p>\n        <p>${payment.customer_email}</p>\n      </div>\n      <div class=\"invoice-details\">\n        <h3>Payment Details:</h3>\n        <p><strong>Payment ID:</strong> ${payment.payment_id}</p>\n        <p><strong>Status:</strong> PAID</p>\n        <p><strong>Method:</strong> ${payment.payment_method.toUpperCase()}</p>\n      </div>\n    </div>\n\n    <table class=\"items-table\">\n      <thead>\n        <tr>\n          <th>Description</th>\n          <th style=\"text-align: right;\">Amount</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr>\n          <td>${payment.description}</td>\n          <td style=\"text-align: right;\">${payment.formatted_amount}</td>\n        </tr>\n      </tbody>\n    </table>\n\n    <div class=\"total-section\">\n      <div class=\"total-row\">\n        <div class=\"label\">Subtotal:</div>\n        <div class=\"amount\">${payment.formatted_amount}</div>\n      </div>\n      <div class=\"total-row\">\n        <div class=\"label\">Tax:</div>\n        <div class=\"amount\">${payment.currency} 0.00</div>\n      </div>\n      <div class=\"total-row grand-total\">\n        <div class=\"label\">TOTAL PAID:</div>\n        <div class=\"amount\">${payment.formatted_amount}</div>\n      </div>\n    </div>\n\n    <div class=\"footer\">\n      <p class=\"thank-you\">Thank you for your business!</p>\n      <p>This invoice was generated automatically on ${payment.formatted_date}</p>\n      <p>${companyEmail} | ${companyPhone}</p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n\nreturn {\n  json: {\n    payment: payment,\n    invoice_html: invoiceHTML,\n    invoice_filename: `Invoice-${payment.invoice_number}.pdf`\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2224,
+        -544
+      ],
+      "id": "f69c29b6-cef5-4742-8caa-0a9f40c47392",
+      "name": "Generate Invoice HTML"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.data.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/pdf"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1776,
+        -544
+      ],
+      "id": "9b7ad725-7f3d-48c5-ab05-67392e6d8828",
+      "name": "GET URL TO GET PDF"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get payment data from the original Parse node\nconst payment = $('Parse Payment Data').first().json;\n\n// Your company details (same as invoice)\nconst companyName = \"AUTOLUIS\";\nconst companyEmail = \"luistonidoisko8@gmail.com\";\nconst companyPhone = \"+0123456789\";\n\n// Build professional receipt HTML\nconst receiptHTML = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <style>\n    body {\n      font-family: Arial, sans-serif;\n      margin: 0;\n      padding: 30px;\n      background-color: #f5f5f5;\n    }\n    .receipt-container {\n      max-width: 600px;\n      margin: 0 auto;\n      background: white;\n      padding: 40px;\n      border-radius: 10px;\n      box-shadow: 0 2px 10px rgba(0,0,0,0.1);\n    }\n    .receipt-header {\n      text-align: center;\n      border-bottom: 2px dashed #0066cc;\n      padding-bottom: 20px;\n      margin-bottom: 30px;\n    }\n    .receipt-header h1 {\n      margin: 0;\n      color: #0066cc;\n      font-size: 32px;\n    }\n    .receipt-header p {\n      margin: 5px 0;\n      color: #666;\n      font-size: 14px;\n    }\n    .success-badge {\n      background-color: #00cc66;\n      color: white;\n      padding: 10px 20px;\n      border-radius: 20px;\n      display: inline-block;\n      font-weight: bold;\n      margin: 20px 0;\n      font-size: 14px;\n    }\n    .receipt-details {\n      margin: 20px 0;\n    }\n    .detail-row {\n      display: flex;\n      justify-content: space-between;\n      padding: 12px 0;\n      border-bottom: 1px solid #eee;\n    }\n    .detail-row .label {\n      color: #666;\n      font-weight: 600;\n      font-size: 14px;\n    }\n    .detail-row .value {\n      color: #333;\n      font-weight: 500;\n      font-size: 14px;\n    }\n    .amount-paid {\n      background-color: #f0f7ff;\n      padding: 25px;\n      border-radius: 8px;\n      margin: 30px 0;\n      text-align: center;\n    }\n    .amount-paid .label {\n      color: #666;\n      font-size: 14px;\n      margin-bottom: 8px;\n    }\n    .amount-paid .amount {\n      font-size: 36px;\n      color: #0066cc;\n      font-weight: bold;\n    }\n    .footer {\n      text-align: center;\n      margin-top: 30px;\n      padding-top: 20px;\n      border-top: 2px dashed #0066cc;\n      font-size: 12px;\n      color: #666;\n    }\n    .footer p {\n      margin: 5px 0;\n    }\n    .footer .thank-you {\n      font-size: 16px;\n      color: #0066cc;\n      font-weight: bold;\n      margin-bottom: 10px;\n    }\n  </style>\n</head>\n<body>\n  <div class=\"receipt-container\">\n    <div class=\"receipt-header\">\n      <h1>RECEIPT</h1>\n      <p>${companyName}</p>\n      <p>${companyEmail} | ${companyPhone}</p>\n      <div class=\"success-badge\">✓ PAYMENT SUCCESSFUL</div>\n    </div>\n\n    <div class=\"receipt-details\">\n      <div class=\"detail-row\">\n        <span class=\"label\">Receipt Number:</span>\n        <span class=\"value\">${payment.invoice_number}</span>\n      </div>\n      <div class=\"detail-row\">\n        <span class=\"label\">Payment Date:</span>\n        <span class=\"value\">${payment.formatted_date}</span>\n      </div>\n      <div class=\"detail-row\">\n        <span class=\"label\">Customer Name:</span>\n        <span class=\"value\">${payment.customer_name}</span>\n      </div>\n      <div class=\"detail-row\">\n        <span class=\"label\">Email:</span>\n        <span class=\"value\">${payment.customer_email}</span>\n      </div>\n      <div class=\"detail-row\">\n        <span class=\"label\">Payment ID:</span>\n        <span class=\"value\">${payment.payment_id}</span>\n      </div>\n      <div class=\"detail-row\">\n        <span class=\"label\">Payment Method:</span>\n        <span class=\"value\">${payment.payment_method.toUpperCase()}</span>\n      </div>\n      <div class=\"detail-row\">\n        <span class=\"label\">Description:</span>\n        <span class=\"value\">${payment.description}</span>\n      </div>\n    </div>\n\n    <div class=\"amount-paid\">\n      <div class=\"label\">Total Amount Paid</div>\n      <div class=\"amount\">${payment.formatted_amount}</div>\n    </div>\n\n    <div class=\"footer\">\n      <p class=\"thank-you\">Thank you for your payment!</p>\n      <p>This is an official receipt for your records.</p>\n      <p>Please keep this for your financial records.</p>\n      <p>Questions? Contact us at ${companyEmail}</p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n\nreturn {\n  json: {\n    payment: payment,\n    receipt_html: receiptHTML,\n    receipt_filename: `Receipt-${payment.invoice_number}.pdf`\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2224,
+        -352
+      ],
+      "id": "b74630ca-406f-4b9f-a75d-b21b3c4f001c",
+      "name": "Generate Receipt HTML"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.pdfendpoint.com/v1/convert",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer pdfe_live_552ec1db7a038bb442bdf5255963dcecee0b"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "html",
+              "value": "={{ $json.invoice_html }}"
+            },
+            {
+              "name": "engine",
+              "value": "chrome"
+            },
+            {
+              "name": "options",
+              "value": "=={{\n  {\n    format: \"A4\",\n    printBackground: true,\n    margin: {\n      top: \"10mm\",\n      bottom: \"10mm\",\n      left: \"10mm\",\n      right: \"10mm\"\n    }\n  }\n}}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1984,
+        -544
+      ],
+      "id": "4bcf0e88-333a-491a-adc9-e6ad6318c050",
+      "name": "HTML  TO PDF INVOICE"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.pdfendpoint.com/v1/convert",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer pdfe_live_552ec1db7a038bb442bdf5255963dcecee0b"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "html",
+              "value": "={{ $json.receipt_html }}"
+            },
+            {
+              "name": "engine",
+              "value": "chrome"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1984,
+        -352
+      ],
+      "id": "7648198e-4daf-4449-b4a5-7ac63de814cf",
+      "name": "HTML TO PDF RECEIPT"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.data.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/pdf"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data1"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1776,
+        -352
+      ],
+      "id": "69493691-8665-4670-8b75-8ae96dbacf83",
+      "name": "GET URL TO GET PDF RECEIPT"
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Generate Invoice HTML').item.json.invoice_filename }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1BHylQzy0xq3_wbudmgPNbg8ON9HruHkr",
+          "mode": "list",
+          "cachedResultName": "Invoices",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1BHylQzy0xq3_wbudmgPNbg8ON9HruHkr"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1488,
+        -608
+      ],
+      "id": "74cdfbb1-58d7-4ad2-adc6-39969a59f25b",
+      "name": "Upload PDF to invoice",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "JXvJd218HrMx0cLc",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "data1",
+        "name": "={{ $('Generate Receipt HTML').item.json.receipt_filename }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "144t3nEr1BpITPGqSShpW4IT7-XDjnHi6",
+          "mode": "list",
+          "cachedResultName": "Receipts",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/144t3nEr1BpITPGqSShpW4IT7-XDjnHi6"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1488,
+        -272
+      ],
+      "id": "2f6a2535-5d90-4603-a9fe-9d968d1bf1e5",
+      "name": "Upload PDF to RECEIPT",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "JXvJd218HrMx0cLc",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "=luistonido09@gmail.com",
+        "subject": "=Payment Confirmation & Invoice - {{ $('Parse Payment Data').first().json.invoice_number }}",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body {\n      font-family: Arial, sans-serif;\n      line-height: 1.6;\n      color: #333;\n    }\n    .container {\n      max-width: 600px;\n      margin: 0 auto;\n      padding: 20px;\n    }\n    .header {\n      background-color: #0066cc;\n      color: white;\n      padding: 20px;\n      text-align: center;\n      border-radius: 8px 8px 0 0;\n    }\n    .content {\n      background-color: #f9f9f9;\n      padding: 30px;\n      border-radius: 0 0 8px 8px;\n    }\n    .payment-box {\n      background-color: #e8f4ff;\n      padding: 20px;\n      border-radius: 8px;\n      margin: 20px 0;\n      border-left: 4px solid #0066cc;\n    }\n    .payment-box p {\n      margin: 8px 0;\n    }\n    .payment-box strong {\n      color: #0066cc;\n    }\n    .button {\n      display: inline-block;\n      background-color: #0066cc;\n      color: white;\n      padding: 12px 30px;\n      text-decoration: none;\n      border-radius: 5px;\n      margin-top: 15px;\n    }\n    .footer {\n      text-align: center;\n      margin-top: 30px;\n      padding-top: 20px;\n      border-top: 1px solid #ddd;\n      font-size: 12px;\n      color: #666;\n    }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h2 style=\"margin: 0;\">Payment Received - Thank You!</h2>\n    </div>\n    \n    <div class=\"content\">\n      <p>Hi <strong>{{ $('Parse Payment Data').first().json.customer_name }}</strong>,</p>\n      \n      <p>We've successfully received your payment. Thank you for your business!</p>\n      \n      <div class=\"payment-box\">\n        <h3 style=\"margin-top: 0; color: #0066cc;\">Payment Details:</h3>\n        <p><strong>Amount Paid:</strong> {{ $('Parse Payment Data').first().json.formatted_amount }}</p>\n        <p><strong>Payment Date:</strong> {{ $('Parse Payment Data').first().json.formatted_date }}</p>\n        <p><strong>Invoice Number:</strong> {{ $('Parse Payment Data').first().json.invoice_number }}</p>\n        <p><strong>Payment ID:</strong> {{ $('Parse Payment Data').first().json.payment_id }}</p>\n        <p><strong>Description:</strong> {{ $('Parse Payment Data').first().json.description }}</p>\n      </div>\n      \n      <p><strong>📎 Attached Documents:</strong></p>\n      <ul>\n        <li>Invoice (PDF) - For your records</li>\n        <li>Receipt (PDF) - Official payment confirmation</li>\n      </ul>\n      \n      <p>Please save these documents for your financial records.</p>\n      \n      <p>If you have any questions about this payment, please don't hesitate to contact us.</p>\n      \n      <p>Best regards,<br>\n      <strong>AUTOLUIS</strong><br>\n       luistonidoisko8@gmail.com<br>\n      +0123456789</p>\n    </div>\n    \n    <div class=\"footer\">\n      <p>This is an automated email confirmation.</p>\n      <p>Please do not reply directly to this message.</p>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {},
+              {
+                "property": "data1"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -1072,
+        -448
+      ],
+      "id": "d63307c4-6f45-48e9-916a-9c427d151ecf",
+      "name": "Send a message",
+      "webhookId": "797df4ec-610b-462a-ba9c-de9bced80852",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1Ca7QdsQvBPsN22H",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {
+          "includeBinaries": true
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -1296,
+        -448
+      ],
+      "id": "9a940e9e-8dbb-49ba-bea5-adaedd4d3dda",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1488,
+        -448
+      ],
+      "id": "1f57df1d-5c6e-412b-ae27-94e1f55b91d6",
+      "name": "Combine Invoice & Receipt"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1NNURFMbGbH25uGXfKHYn2_v6MKUN3nNT04ajemMhuJ4",
+          "mode": "list",
+          "cachedResultName": "Payment Records",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NNURFMbGbH25uGXfKHYn2_v6MKUN3nNT04ajemMhuJ4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NNURFMbGbH25uGXfKHYn2_v6MKUN3nNT04ajemMhuJ4/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Payment ID": "={{ $('Parse Payment Data').item.json.payment_id }}",
+            "Customer Name": "={{ $('Parse Payment Data').item.json.customer_name }}",
+            "Customer Email": "={{ $('Parse Payment Data').item.json.customer_email }}",
+            "Amount": "={{ $('Parse Payment Data').item.json.amount }}",
+            "Currency": "={{ $('Parse Payment Data').item.json.currency }}",
+            "Description": "={{ $('Parse Payment Data').item.json.description }}",
+            "Payment Date": "={{ $('Parse Payment Data').item.json.payment_date }}",
+            "Invoice Number": "={{ $('Parse Payment Data').item.json.invoice_number }}",
+            "Invoice URL": "={{ $('Aggregate').item.json.data[0].data.url }}",
+            "Receipt URL": "={{ $('Aggregate').item.json.data[1].data.url }}",
+            "Status": "Completed",
+            "Processed At": "={{ $now }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Payment ID",
+              "displayName": "Payment ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Email",
+              "displayName": "Customer Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Currency",
+              "displayName": "Currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Payment Date",
+              "displayName": "Payment Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Invoice Number",
+              "displayName": "Invoice Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Invoice URL",
+              "displayName": "Invoice URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Receipt URL",
+              "displayName": "Receipt URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Processed At",
+              "displayName": "Processed At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -848,
+        -448
+      ],
+      "id": "45be2abf-7618-4ccb-9c9f-9c887ae75a65",
+      "name": "Log to Payment Database",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ivPUCSdGw6qKtyit",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ABX1AJN2W",
+          "mode": "list",
+          "cachedResultName": "payment"
+        },
+        "text": "=💰 *New Payment Received!*\n\n*Customer:* {{ $('Parse Payment Data').first().json.customer_name }}\n*Email:* {{ $('Parse Payment Data').first().json.customer_email }}\n*Amount:* {{ $('Parse Payment Data').first().json.formatted_amount }}\n*Invoice:* {{ $('Parse Payment Data').first().json.invoice_number }}\n\n✅ Invoice & receipt generated\n✅ Files saved to Google Drive\n✅ Customer notified via email\n✅ Payment logged to database\n\n📎 *Quick Links:*\n<{{ $json['Invoice URL'] }}|View Invoice> | <{{ $json['Receipt URL'] }}|View Receipt>\n\n💳 Payment ID: {{ $('Parse Payment Data').first().json.payment_id }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        -672,
+        -448
+      ],
+      "id": "bf2da361-ed80-4a49-a723-d08b31f6b837",
+      "name": "Notify Team on Slack",
+      "webhookId": "6f1e51db-63db-4acc-ac16-b1ab90f71633",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "MGFVubXNngjZW63m",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Payment processed successfully\",\n  \"invoice_number\": \"{{ $('Parse Payment Data').first().json.invoice_number }}\",\n  \"customer_email\": \"{{ $('Parse Payment Data').first().json.customer_email }}\",\n  \"amount\": \"{{ $('Parse Payment Data').first().json.formatted_amount }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -480,
+        -448
+      ],
+      "id": "39e1294e-77b9-4678-aa2e-26e9a522f6b0",
+      "name": "Success Response"
+    },
+    {
+      "parameters": {
+        "content": "DATA PROCESSING",
+        "height": 560,
+        "width": 176
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2464,
+        -656
+      ],
+      "id": "3d91e8db-3796-41bb-9de0-f36f743717b5",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "FILE STORAGE",
+        "height": 560,
+        "width": 272,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1584,
+        -656
+      ],
+      "id": "87741e32-b59c-4526-ba47-01565eef44e3",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "NOTIFICATIONS",
+        "height": 560,
+        "width": 800,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1312,
+        -656
+      ],
+      "id": "d26bca53-b2b8-4fa4-8a41-c734003d3ef1",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "RESPONCE WEBHOOK",
+        "height": 560,
+        "width": 336,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        -656
+      ],
+      "id": "ee36fe72-8fcb-4786-afe3-a844358bc799",
+      "name": "Sticky Note5"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive Stripe Payment": {
+      "main": [
+        [
+          {
+            "node": "Parse Payment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Payment Data": {
+      "main": [
+        [
+          {
+            "node": "Generate Invoice HTML",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Receipt HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Invoice HTML": {
+      "main": [
+        [
+          {
+            "node": "HTML  TO PDF INVOICE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET URL TO GET PDF": {
+      "main": [
+        [
+          {
+            "node": "Upload PDF to invoice",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Combine Invoice & Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML  TO PDF INVOICE": {
+      "main": [
+        [
+          {
+            "node": "GET URL TO GET PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Receipt HTML": {
+      "main": [
+        [
+          {
+            "node": "HTML TO PDF RECEIPT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML TO PDF RECEIPT": {
+      "main": [
+        [
+          {
+            "node": "GET URL TO GET PDF RECEIPT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET URL TO GET PDF RECEIPT": {
+      "main": [
+        [
+          {
+            "node": "Upload PDF to RECEIPT",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Combine Invoice & Receipt",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Upload PDF to invoice": {
+      "main": [
+        []
+      ]
+    },
+    "Upload PDF to RECEIPT": {
+      "main": [
+        []
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Invoice & Receipt": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Log to Payment Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Payment Database": {
+      "main": [
+        [
+          {
+            "node": "Notify Team on Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Team on Slack": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "51a7ea16-0c8a-4dc7-bd7f-585f159377e0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "37a7efe6bc78c57f88daf9bb000ecfd013a6e39659a449d31385fe6842e1c86d"
+  },
+  "id": "HrO_DeVOhzn0ZNix1KB4x",
+  "tags": []
+}
