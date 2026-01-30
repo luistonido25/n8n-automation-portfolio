@@ -32,6 +32,6 @@ Automatically generates PDF invoices and receipts after a trigger, uploads them 
 **Tools used:**  
 n8n, PDF API, Google Drive API, Gmail API
 
-📁 Folder: `invoice-automation/`
+📁 Folder: `Payment-to-Invoice-Automation-System`
 
 ---
