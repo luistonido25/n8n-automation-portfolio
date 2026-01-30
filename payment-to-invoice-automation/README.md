@@ -95,11 +95,13 @@ Success Response
 
 ## 🎨 Sample Documents
 
-- Invoice PDF 
+Invoice PDF :
 <img width="598" height="657" alt="image" src="https://github.com/user-attachments/assets/3c7290af-e1a9-4647-91ca-05136e757075" />
-- Receipt PDF 
+
+Receipt PDF :
 <img width="592" height="702" alt="image" src="https://github.com/user-attachments/assets/48c18aa0-bfda-4b7d-ba8e-7093e8e65bc7" />
-- Customer email 
+
+Customer email :
 <img width="1723" height="570" alt="image" src="https://github.com/user-attachments/assets/a7dca9b3-d0a7-4c63-bf42-112682a6c2f3" />
 - Slack notification
 <img width="1341" height="358" alt="image" src="https://github.com/user-attachments/assets/5b1bc207-f81a-47d4-9bad-06fb9217a97d" />
