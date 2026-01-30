@@ -93,8 +93,8 @@ Notify Team on Slack
 Success Response
 ```
 
-## 🎨 Sample Documents
-
+## 📸 Sample Documents & Workflow
+<img width="1727" height="560" alt="image" src="https://github.com/user-attachments/assets/0a4eb8ea-364c-47c7-b4ec-1ad17803efcb" />
 <img width="598" height="657" alt="image" src="https://github.com/user-attachments/assets/3c7290af-e1a9-4647-91ca-05136e757075" />
 <img width="592" height="702" alt="image" src="https://github.com/user-attachments/assets/48c18aa0-bfda-4b7d-ba8e-7093e8e65bc7" />
 <img width="847" height="673" alt="image" src="https://github.com/user-attachments/assets/c780c8db-6ae5-418e-8f01-7aea47ae38b9" />
