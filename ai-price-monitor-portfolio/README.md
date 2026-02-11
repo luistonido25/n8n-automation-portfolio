@@ -2,7 +2,7 @@
 
 > **Portfolio Project:** Intelligent e-commerce automation system demonstrating modern no-code workflows, AI integration, and real-time data processing.
 
-[![Live Demo](https://img.shields.io/badge/Demo-Try_It_Live-667eea?style=for-the-badge&logo=lightning)](ai-pricing-checker.netlify.app)
+[![Live Demo](https://img.shields.io/badge/Demo-Try_It_Live-667eea?style=for-the-badge&logo=lightning)][(ai-pricing-checker.netlify.app)](https://ai-pricing-checker.netlify.app/)
 [![Portfolio](https://img.shields.io/badge/Portfolio-View_More-764ba2?style=for-the-badge&logo=react)](https://luistonido-portfolio.netlify.app/)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?style=for-the-badge&logo=linkedin)](www.linkedin.com/in/luis-carlos-tonido-971229193)
 
