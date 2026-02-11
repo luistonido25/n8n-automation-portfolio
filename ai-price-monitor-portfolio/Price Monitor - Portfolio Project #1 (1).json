@@ -1,0 +1,1019 @@
+{
+  "name": "Price Monitor - Portfolio Project #1",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "f3706cfb-a6eb-42c1-9d69-bbe76d7e831d",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2752,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appzhtf5rRZV9maOA",
+          "mode": "list",
+          "cachedResultName": "Price Monitor Portfolio",
+          "cachedResultUrl": "https://airtable.com/appzhtf5rRZV9maOA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblhQCbcZoTusjES3",
+          "mode": "list",
+          "cachedResultName": "Products",
+          "cachedResultUrl": "https://airtable.com/appzhtf5rRZV9maOA/tblhQCbcZoTusjES3"
+        },
+        "filterByFormula": "{status} = 'Active'",
+        "options": {}
+      },
+      "id": "80bff430-7b31-4b5c-aa1f-a23fd9f486f3",
+      "name": "Get Active Products",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [
+        -2528,
+        -208
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "scnoFAi7Ju8gzZHQ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.competitor_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "en-US,en;q=0.9"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml"
+            },
+            {
+              "name": "Cookie",
+              "value": "i18n-prefs=USD; lc-main=en_US"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "46b6aeda-c26a-42d9-abb0-5c83c86d41cc",
+      "name": "Scrape Competitor Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2080,
+        -208
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data ?? '';\nconst loopItem = $('Loop Over Items').first().json;\n\nconst productId = loopItem.product_id ?? null;\nconst productName = loopItem.product_name ?? null;\nconst yourPrice = Number(loopItem.your_price);\nconst minPrice = loopItem.min_price ?? null;\nconst maxPrice = loopItem.max_price ?? null;\n\nconst url = (loopItem.competitor_url ?? '').toLowerCase();\n\nlet competitorName = url.includes('ebay.') ? 'eBay' : (url.includes('amazon.') ? 'Amazon' : 'Competitor');\nlet competitorPrice = null;\n\n// ---------- AMAZON ----------\nif (competitorName === 'Amazon') {\n  const hiddenPriceMatch = html.match(/name=\"priceValue\"\\s+value=\"([0-9.]+)\"/i);\n  if (hiddenPriceMatch) competitorPrice = parseFloat(hiddenPriceMatch[1]);\n\n  if (competitorPrice === null) {\n    const wholeMatch = html.match(/class=\"a-price-whole\"[^>]*>\\s*([0-9,]+)\\s*</i);\n    const fracMatch  = html.match(/class=\"a-price-fraction\"[^>]*>\\s*([0-9]{1,2})\\s*</i);\n    if (wholeMatch) {\n      const whole = wholeMatch[1].replace(/,/g, '');\n      const frac = fracMatch ? fracMatch[1].padEnd(2, '0') : '00';\n      competitorPrice = parseFloat(`${whole}.${frac}`);\n    }\n  }\n\n  if (!Number.isFinite(competitorPrice)) competitorPrice = null;\n}\n\n// ---------- EBAY ----------\nif (competitorName === 'eBay') {\n  // 1) Your exact pattern\n  const ebaySpanMatch = html.match(\n    /<span[^>]*class=\"ux-textspans\"[^>]*>\\s*US\\s*\\$?\\s*([0-9,]+(?:\\.[0-9]{2})?)\\s*<\\/span>/i\n  );\n  if (ebaySpanMatch) competitorPrice = parseFloat(ebaySpanMatch[1].replace(/,/g, ''));\n\n  // 2) Fallback: any \"US $195.00\" anywhere (in case class changes)\n  if (competitorPrice === null) {\n    const anyUsdMatch = html.match(/US\\s*\\$\\s*([0-9,]+(?:\\.[0-9]{2})?)/i);\n    if (anyUsdMatch) competitorPrice = parseFloat(anyUsdMatch[1].replace(/,/g, ''));\n  }\n\n  if (!Number.isFinite(competitorPrice)) competitorPrice = null;\n}\n\n// ---------- Calculations ----------\nlet priceDifference = null;\nlet percentDifference = null;\n\nif (competitorPrice !== null && Number.isFinite(yourPrice) && yourPrice !== 0) {\n  priceDifference = yourPrice - competitorPrice;\n  percentDifference = ((priceDifference / yourPrice) * 100).toFixed(2);\n}\n\nreturn [{\n  json: {\n    product_id: productId,\n    product_name: productName,\n    your_price: loopItem.your_price,\n    min_price: minPrice,\n    max_price: maxPrice,\n    competitor_price: competitorPrice,\n    price_difference: priceDifference,\n    percent_difference: percentDifference,\n    competitor_name: competitorName,\n    timestamp: new Date().toISOString(),\n    scrape_success: competitorPrice !== null\n  }\n}];"
+      },
+      "id": "bda0e0f9-e853-455b-92f9-1515958ac484",
+      "name": "Extract Price from HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1856,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "52487c53-866c-4109-b89d-50e92e839022",
+              "leftValue": "={{ $json.scrape_success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "17daa247-110a-4214-bcdd-07a1988b2d6b",
+      "name": "Price Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1632,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Product data from your extraction node\nconst productData = $('Extract Price from HTML').first().json;\n\n// 1) Get the AI text from the EXACT path in your output\nconst aiTextRaw = $input.first().json?.output?.[0]?.content?.[0]?.text ?? '';\nlet aiText = String(aiTextRaw).trim();\n\n// 2) Remove markdown fences if present\naiText = aiText\n  .replace(/```json/gi, '```')\n  .replace(/```/g, '')\n  .trim();\n\n// 3) Extract only the JSON object\nconst firstBrace = aiText.indexOf('{');\nconst lastBrace = aiText.lastIndexOf('}');\nif (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {\n  aiText = aiText.slice(firstBrace, lastBrace + 1);\n}\n\nlet recommendation;\n\n// 4) Parse JSON\ntry {\n  recommendation = JSON.parse(aiText);\n} catch (e) {\n  // Return debug so we can see what failed (and avoid wrong “hold” silently)\n  return [{\n    json: {\n      ...productData,\n      ai_action: 'hold',\n      ai_suggested_price: productData.your_price ?? null,\n      ai_reason: 'Unable to analyze - maintaining current price',\n      ai_urgency: 'low',\n      debug_ai_text_raw: aiTextRaw,\n      debug_ai_text_extracted: aiText,\n      debug_parse_error: String(e.message || e)\n    }\n  }];\n}\n\n// 5) Normalize fields (recommended_price vs suggested_price)\nconst suggestedPrice =\n  recommendation.suggested_price ??\n  recommendation.recommended_price ??\n  productData.your_price ??\n  null;\n\n// 6) Normalize urgency (is_urgent boolean -> high/low)\nconst urgency =\n  typeof recommendation.is_urgent === 'boolean'\n    ? (recommendation.is_urgent ? 'high' : 'low')\n    : (recommendation.urgency ?? 'low');\n\nreturn [{\n  json: {\n    ...productData,\n    ai_action: recommendation.action ?? 'hold',\n    ai_suggested_price: suggestedPrice,\n    ai_reason: recommendation.reason ?? '',\n    ai_urgency: urgency\n  }\n}];"
+      },
+      "id": "af840ac2-0820-40bc-a867-5ab48a20e2aa",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1056,
+        -272
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appzhtf5rRZV9maOA",
+          "mode": "list",
+          "cachedResultName": "Price Monitor Portfolio",
+          "cachedResultUrl": "https://airtable.com/appzhtf5rRZV9maOA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbliXTRyqEwtlVZHC",
+          "mode": "list",
+          "cachedResultName": "Price History",
+          "cachedResultUrl": "https://airtable.com/appzhtf5rRZV9maOA/tbliXTRyqEwtlVZHC"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "your_price": "={{ $json.your_price }}",
+            "competitor_price": "={{ $json.competitor_price }}",
+            "price_difference": "={{ $json.price_difference }}",
+            "percent_difference": "={{ $json.percent_difference / 100 }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "product": "={{ [$('Loop Over Items').item.json.id] }}",
+            "competitor_name": "={{ $json.competitor_name }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "record_id",
+              "displayName": "record_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "product",
+              "displayName": "product",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "your_price",
+              "displayName": "your_price",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "competitor_price",
+              "displayName": "competitor_price",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "price_difference",
+              "displayName": "price_difference",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "percent_difference",
+              "displayName": "percent_difference",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "competitor_name",
+              "displayName": "competitor_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "83a94995-f6f4-4cb1-977c-4ed70e85439f",
+      "name": "Log to Price History",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [
+        -832,
+        -272
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "scnoFAi7Ju8gzZHQ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "4c706293-555e-409c-a294-ae47cc834af0",
+              "leftValue": "={{ $('Parse AI Response').item.json.ai_action }}",
+              "rightValue": "=hold",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "74bba235-89be-473d-b98b-4642c33861fa",
+              "leftValue": "={{ $('Parse AI Response').item.json.ai_suggested_price }}",
+              "rightValue": "={{ $('Parse AI Response').item.json.your_price }}",
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f6826713-fa21-4a2d-8934-5365303674b7",
+      "name": "Action Needed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        -272
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appzhtf5rRZV9maOA",
+          "mode": "list",
+          "cachedResultName": "Price Monitor Portfolio",
+          "cachedResultUrl": "https://airtable.com/appzhtf5rRZV9maOA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl7mhhnRuBnzE1Jw",
+          "mode": "list",
+          "cachedResultName": "Recommendations",
+          "cachedResultUrl": "https://airtable.com/appzhtf5rRZV9maOA/tbl7mhhnRuBnzE1Jw"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $json.fields.timestamp }}",
+            "current_price": "={{ $json.fields.your_price }}",
+            "competitor_price": "={{ $json.fields.competitor_price }}",
+            "ai_action": "Decrease",
+            "suggested_price": "={{ $('Parse AI Response').item.json.ai_suggested_price }}",
+            "reason": "={{ $('Parse AI Response').item.json.ai_reason }}",
+            "urgency": "={{ \n  $json.ai_urgency === 'high' ? 'High' :\n  $json.ai_urgency === 'medium' ? 'Medium' :\n  'Low'\n}}",
+            "status": "Pending",
+            "product": "={{ [$('Log to Price History').item.json.fields.product[0]] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "record_id",
+              "displayName": "record_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "product",
+              "displayName": "product",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "current_price",
+              "displayName": "current_price",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "competitor_price",
+              "displayName": "competitor_price",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_action",
+              "displayName": "ai_action",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Increase",
+                  "value": "Increase"
+                },
+                {
+                  "name": "Decrease",
+                  "value": "Decrease"
+                },
+                {
+                  "name": "Hold",
+                  "value": "Hold"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "suggested_price",
+              "displayName": "suggested_price",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reason",
+              "displayName": "reason",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "urgency",
+              "displayName": "urgency",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Low",
+                  "value": "Low"
+                },
+                {
+                  "name": "Medium",
+                  "value": "Medium"
+                },
+                {
+                  "name": "High",
+                  "value": "High"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pending",
+                  "value": "Pending"
+                },
+                {
+                  "name": "Approved",
+                  "value": "Approved"
+                },
+                {
+                  "name": "Rejected",
+                  "value": "Rejected"
+                },
+                {
+                  "name": "Applied",
+                  "value": "Applied"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "89730ee0-56ad-43e3-81d0-14a12480fcb7",
+      "name": "Log Recommendation",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [
+        -384,
+        -416
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "scnoFAi7Ju8gzZHQ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "5b6e588f-c07e-42e3-8b64-3df346b680d2",
+              "leftValue": "={{ $('Parse AI Response').item.json.ai_urgency }}",
+              "rightValue": "high",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1f62a5ab-d909-4730-8d1c-48477cad4928",
+      "name": "Is Urgent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        -432
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ADESCER71",
+          "mode": "list",
+          "cachedResultName": "price-alerts"
+        },
+        "text": "=🚨 *URGENT PRICE ALERT*\n\n*Product:* {{ $('Loop Over Items').item.json.product_name }}\n*Your Price:* ${{ $('Loop Over Items').item.json.your_price }}\n*Competitor Price:* ${{ $('Parse AI Response').item.json.competitor_price }}\n*Difference:* {{ $('Parse AI Response').item.json.percent_difference }}%)\n\n*AI Recommendation:* {{ $('Log Recommendation').item.json.fields.ai_action }}\n*Suggested Price:* ${{ $('Log Recommendation').item.json.fields.suggested_price }}\n*Reason:* {{ $('Log Recommendation').item.json.fields.reason }}\n\n⚡ Action required - check Airtable for details",
+        "otherOptions": {}
+      },
+      "id": "a5055756-fe88-44ac-ac26-552dde822a74",
+      "name": "Send Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        112,
+        -496
+      ],
+      "webhookId": "2238faef-2f69-423d-a3f3-0e5e8395ef27",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "MGFVubXNngjZW63m",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -2304,
+        -208
+      ],
+      "id": "61df52c3-623e-4bef-9648-479dce716912",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-5-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=You are a pricing analyst for an e-commerce business.\nReturn ONLY valid JSON. No markdown, no extra text.\nFollow the schema exactly. If data is missing, set fields to null."
+            },
+            {
+              "content": "=Analyze this product and recommend what to do.\n\nProduct: {{ $json.product_name }}\nYour price: {{ $json.your_price }}\nMin price: {{ $json.min_price }}\nMax price: {{ $json.max_price }}\nCompetitor: {{ $json.competitor_name }}\nCompetitor price: {{ $json.competitor_price }}\nPrice difference: {{ $json.price_difference }}\nPercent difference: {{ $json.percent_difference }}\n\nRules:\n- Never recommend below min_price.\n- Prefer small changes (1–5%) unless gap is huge.\n- If competitor is higher, recommend \"hold\" or \"raise\" if safe.\n- If competitor is lower, recommend \"lower\" only if still >= min_price.\n\nReturn JSON in this exact format:\n{\n  \"action\": \"hold|lower|raise|alert\",\n  \"recommended_price\": number|null,\n  \"reason\": \"string\",\n  \"is_urgent\": true|false\n}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        -1408,
+        -272
+      ],
+      "id": "27023d5b-02a3-4e9b-a885-5b7b78887278",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "WyKwN0iqfLgcw2d7",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appzhtf5rRZV9maOA",
+          "mode": "list",
+          "cachedResultName": "Price Monitor Portfolio",
+          "cachedResultUrl": "https://airtable.com/appzhtf5rRZV9maOA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbleQeX8GDUSAS9rf",
+          "mode": "list",
+          "cachedResultName": "Alerts",
+          "cachedResultUrl": "https://airtable.com/appzhtf5rRZV9maOA/tbleQeX8GDUSAS9rf"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "product": "={{ [$('Loop Over Items').item.json.id] }}",
+            "timestamp": "={{ $now }}",
+            "alert_type": "Scrape Failed",
+            "message": "Could not extract price",
+            "severity": "Warning"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "record_id",
+              "displayName": "record_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "product",
+              "displayName": "product",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "alert_type",
+              "displayName": "alert_type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Price Drop",
+                  "value": "Price Drop"
+                },
+                {
+                  "name": "Scrape Failed",
+                  "value": "Scrape Failed"
+                },
+                {
+                  "name": "Urgent Action",
+                  "value": "Urgent Action"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "severity",
+              "displayName": "severity",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Info",
+                  "value": "Info"
+                },
+                {
+                  "name": "Warning",
+                  "value": "Warning"
+                },
+                {
+                  "name": "Critical",
+                  "value": "Critical"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -848,
+        -16
+      ],
+      "id": "8f737b84-fd05-4963-96c8-5344f115722b",
+      "name": "Log Alert",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "scnoFAi7Ju8gzZHQ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        368,
+        32
+      ],
+      "id": "776eb8c2-e59c-460c-b175-6bd915d0c5e6",
+      "name": "No Operation, do nothing"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 6 Hours": {
+      "main": [
+        [
+          {
+            "node": "Get Active Products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Products": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Competitor Page": {
+      "main": [
+        [
+          {
+            "node": "Extract Price from HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Price from HTML": {
+      "main": [
+        [
+          {
+            "node": "Price Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Price Found?": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Log to Price History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Price History": {
+      "main": [
+        [
+          {
+            "node": "Action Needed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action Needed?": {
+      "main": [
+        [
+          {
+            "node": "Log Recommendation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Recommendation": {
+      "main": [
+        [
+          {
+            "node": "Is Urgent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Urgent?": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Scrape Competitor Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Slack Alert": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Alert": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Operation, do nothing": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "ef587a14-a257-483e-a7f8-224b0e2ff919",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "37a7efe6bc78c57f88daf9bb000ecfd013a6e39659a449d31385fe6842e1c86d"
+  },
+  "id": "ee4qwG54VUy1AAnZQpW3t",
+  "tags": []
+}
