@@ -2,9 +2,9 @@
 
 > **Portfolio Project:** Intelligent e-commerce automation system demonstrating modern no-code workflows, AI integration, and real-time data processing.
 
-[![Live Demo](https://img.shields.io/badge/Demo-Try_It_Live-667eea?style=for-the-badge&logo=lightning)](https://your-demo-url.netlify.app)
-[![Portfolio](https://img.shields.io/badge/Portfolio-View_More-764ba2?style=for-the-badge&logo=react)](https://yourportfolio.com)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?style=for-the-badge&logo=linkedin)](https://linkedin.com/in/yourprofile)
+[![Live Demo](https://img.shields.io/badge/Demo-Try_It_Live-667eea?style=for-the-badge&logo=lightning)](ai-pricing-checker.netlify.app)
+[![Portfolio](https://img.shields.io/badge/Portfolio-View_More-764ba2?style=for-the-badge&logo=react)](https://luistonido-portfolio.netlify.app/)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?style=for-the-badge&logo=linkedin)](www.linkedin.com/in/luis-carlos-tonido-971229193)
 
 ---
 
@@ -305,40 +305,11 @@ This architecture pattern can be adapted for:
 - **Market Research:** Track competitor product launches
 - **Compliance Monitoring:** Alert on regulatory changes
 
----
-
-## 📁 Project Structure
-
-```
-ai-price-monitor/
-├── workflows/
-│   ├── price-monitor.json          # Main n8n workflow
-│   └── demo-webhook.json            # Public demo workflow
-├── database/
-│   ├── airtable-schema.json         # Database structure
-│   └── sample-data.csv              # Example products
-├── frontend/
-│   └── demo-page.html               # Public demo interface
-├── documentation/
-│   ├── architecture.md              # System design docs
-│   ├── setup-guide.md               # Installation guide
-│   └── api-reference.md             # Webhook API docs
-├── screenshots/
-│   ├── workflow.png
-│   ├── dashboard.png
-│   └── results.png
-└── README.md                        # This file
-```
-
----
 
 ## 🔗 Live Links
 
-- **[🌐 Live Demo](https://your-demo-url.netlify.app)** - Try it yourself
-- **[📊 Dashboard Preview](https://airtable.com/shrXXXXXXXXXX)** - View sample data
-- **[🎥 Demo Video](https://youtube.com/watch?v=XXXXX)** - 2-minute walkthrough
-- **[📝 Case Study](https://yourportfolio.com/projects/price-monitor)** - Detailed write-up
-
+- **[🌐 Live Demo](ai-pricing-checker.netlify.app)** - Try it yourself
+- **[🎥 Demo Video](https://youtube.com/watch?v=XXXXX)** - 2-minute walkthrough (coming soon)
 ---
 
 ## 💼 About This Project
@@ -355,7 +326,7 @@ This is a **portfolio demonstration project** built to showcase:
 
 ## 👨‍💻 About Me
 
-**Your Name** - Automation & AI Integration Specialist
+**LUIS CARLOS J. TONIDO ** - Automation & AI Integration Specialist
 
 I build intelligent automation systems that solve real business problems. Passionate about no-code/low-code solutions that democratize technology.
 
@@ -366,25 +337,7 @@ I build intelligent automation systems that solve real business problems. Passio
 - API Development & Integration
 - System Architecture & Design
 
-**Let's connect:**
-- 💼 [LinkedIn](https://linkedin.com/in/yourprofile)
-- 🌐 [Portfolio](https://yourportfolio.com)
-- 📧 [Email](mailto:your.email@example.com)
-- 🐦 [Twitter](https://twitter.com/yourhandle)
 
----
-
-## 📬 Get In Touch
-
-Interested in discussing:
-- Automation opportunities
-- AI integration projects  
-- Technical consulting
-- Job opportunities
-
-**[📧 Schedule a Call](https://calendly.com/yourlink)** or **[💬 Send a Message](mailto:your.email@example.com)**
-
----
 
 ## 📄 License
 
