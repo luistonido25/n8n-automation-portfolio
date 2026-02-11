@@ -36,7 +36,7 @@ An intelligent system that:
 ## 🎬 See It In Action
 
 ### Live Demo
-**[🚀 Try the Interactive Demo](https://your-demo-url.netlify.app)** - No signup required!
+**[🚀 Try the Interactive Demo](https://ai-pricing-checker.netlify.app)** - No signup required!
 
 Enter any Amazon product URL and see AI-powered price analysis in real-time.
 
