@@ -326,7 +326,7 @@ This is a **portfolio demonstration project** built to showcase:
 
 ## 👨‍💻 About Me
 
-**LUIS CARLOS J. TONIDO ** - Automation & AI Integration Specialist
+LUIS CARLOS J. TONIDO - Automation & AI Integration Specialist
 
 I build intelligent automation systems that solve real business problems. Passionate about no-code/low-code solutions that democratize technology.
 
