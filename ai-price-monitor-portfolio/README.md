@@ -52,17 +52,17 @@ Enter any Amazon product URL and see AI-powered price analysis in real-time.
       <p align="center"><b>Automated Workflow Architecture</b></p>
     </td>
     <td width="50%">
-      <img src="screenshots/dashboard.png" alt="Dashboard" />
+  <img width="1851" height="827" alt="image" src="https://github.com/user-attachments/assets/d62d95d4-a401-4f26-b1e6-629abce18d20" />
       <p align="center"><b>Real-Time Analytics Dashboard</b></p>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <img src="screenshots/ai-analysis.png" alt="AI Analysis" />
+      <img width="1751" height="830" alt="image" src="https://github.com/user-attachments/assets/00b4732b-2cf2-4fe6-ab94-dd0e8b49a9ff" />
       <p align="center"><b>AI-Powered Price Recommendations</b></p>
     </td>
     <td width="50%">
-      <img src="screenshots/slack-alert.png" alt="Slack Alert" />
+       <img width="1365" height="253" alt="image" src="https://github.com/user-attachments/assets/06bfa740-33d6-4dc7-a573-23536fe05a40" />
       <p align="center"><b>Instant Team Notifications</b></p>
     </td>
   </tr>
