@@ -48,7 +48,7 @@ Enter any Amazon product URL and see AI-powered price analysis in real-time.
 <table>
   <tr>
     <td width="50%">
-      <img src="screenshots/workflow.png" alt="n8n Workflow" />
+      <img width="1807" height="627" alt="image" src="https://github.com/user-attachments/assets/4d5792de-3989-45dd-b892-e90fa096080d" />
       <p align="center"><b>Automated Workflow Architecture</b></p>
     </td>
     <td width="50%">
