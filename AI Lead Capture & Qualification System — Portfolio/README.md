@@ -1,4 +1,4 @@
-# AI Lead Capture & Qualification System — Portfolio
+# AI Lead Capture & Qualification System
 
 **One-line:** Intelligent multi-tier lead capture built with n8n, OpenAI, and Postgres — a production-ready automation that showcases architecture, integrations, and system design skills.
 
@@ -51,7 +51,8 @@ This is a portfolio piece — not a step-by-step tutorial. The goal is to showca
 ## Architecture & Screenshot
 Below is a visual overview of the workflow. Replace the placeholder image with a high-resolution screenshot of the n8n editor showing the workflow and color-coded sticky notes.
 
-![Workflow overview](assets/screenshots/workflow.png)
+![Workflow overview](<img width="1287" height="763" alt="myworkflow#3" src="https://github.com/user-attachments/assets/35698a17-09f3-4681-a3a8-2303c90ef610" />
+)
 
 (Place a screenshot at `assets/screenshots/workflow.png` in the repo.)
 
@@ -65,3 +66,4 @@ This README intentionally focuses on the architecture, design choices, and skill
 
 ---
 _Portfolio-ready snapshot — prepared for technical reviewers._
+
