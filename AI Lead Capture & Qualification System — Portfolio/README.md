@@ -56,15 +56,14 @@ An intelligent automation system that:
 
 ## 📸 Screenshots
 
-<table>
-  <tr>
-    <td width="100%">
-      <img width="1800" height="900" alt="AI Lead Capture Workflow" src= <img width="1287" height="763" alt="myworkflow#3" src="https://github.com/user-attachments/assets/caba0f7c-2f95-4111-be99-9d64b88906ab" />
- />
-      <p align="center"><b>Full AI Lead Capture & Qualification Workflow (n8n)</b></p>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="<img width="1287" height="763" alt="myworkflow#3" src="https://github.com/user-attachments/assets/a85ed6cc-d7f9-48cd-b826-f5270d906520" />
+" alt="AI Lead Capture Workflow" width="100%" />
+</p>
+
+<p align="center">
+  <b>Full AI Lead Capture & Qualification Workflow (n8n)</b>
+</p>
 ---
 
 ## 🏗️ System Architecture
@@ -279,6 +278,7 @@ Architecture patterns may be referenced but not deployed commercially as-is.
 <p align="center">
   <a href="#-project-overview">Back to Top ↑</a>
 </p>
+
 
 
 
