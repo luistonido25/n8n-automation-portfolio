@@ -1,0 +1,1079 @@
+{
+  "name": "AI Lead Capture & Qualification System",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-capture-pro",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        512
+      ],
+      "webhookId": "lead-capture-pro",
+      "id": "2aec3cc0-accf-4e05-815e-f24f4ccc4650"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst body = raw.body || raw;\nconst email = (body.email || '').toLowerCase().trim();\nconst name = (body.name || '').trim();\nconst message = (body.message || '').trim();\nconst domain = email.split('@')[1] || '';\n\nconst disposable = [\n  'tempmail.com','throwaway.email','guerrillamail.com','mailinator.com',\n  'yopmail.com','trashmail.com','sharklasers.com','maildrop.cc',\n  '10minutemail.com','guerrillamail.info','dispostable.com','fakeinbox.com',\n  'temp-mail.org','emailondeck.com','mohmal.com','burnermail.io'\n];\n\nconst spamPatterns = [/test@test/i, /asdf/i, /xxxx/i, /buy now|click here|act now/i];\nconst isDisposable = disposable.includes(domain);\nconst hasSpamPattern = spamPatterns.some(p => p.test(email) || p.test(name) || p.test(message));\nconst isMissingEmail = !email || !email.includes('@') || !domain.includes('.');\nconst isMissingName = !name || name.length < 2;\nconst isBot = name === email || /^[0-9]+$/.test(name);\n\nconst isSpam = isDisposable || hasSpamPattern || isMissingEmail || isMissingName || isBot;\nlet spamReason = '';\nif (isDisposable) spamReason = 'disposable email provider';\nelse if (hasSpamPattern) spamReason = 'spam pattern detected';\nelse if (isMissingEmail) spamReason = 'invalid or missing email';\nelse if (isMissingName) spamReason = 'invalid or missing name';\nelse if (isBot) spamReason = 'bot-like submission';\n\nreturn [{\n  json: {\n    ...body,\n    _isSpam: isSpam,\n    _spamReason: spamReason,\n    _sourceIp: raw.headers ? (raw.headers['x-forwarded-for'] || 'unknown') : 'unknown',\n    _userAgent: raw.headers ? (raw.headers['user-agent'] || 'unknown') : 'unknown'\n  }\n}];"
+      },
+      "name": "Spam Detection",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        512
+      ],
+      "id": "f5a9f38e-6fbb-4d79-a0a0-208c0b3dabfb"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "spam-check",
+              "leftValue": "={{ $json._isSpam }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "IF Spam",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        512
+      ],
+      "id": "59b8ee91-3299-4400-8c94-f372a185206e"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: \"rejected\", reason: $json._spamReason || \"spam detected\", code: \"SPAM_DETECTED\" }) }}",
+        "options": {
+          "responseCode": 422
+        }
+      },
+      "name": "Spam Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        672,
+        416
+      ],
+      "id": "670c6bbc-4cac-4086-89b3-2b65f1b59806"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst errors = [];\n\nif (!data.name || data.name.trim().length < 2)\n  errors.push('name is required (min 2 characters)');\nif (!data.email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(data.email))\n  errors.push('a valid email address is required');\n\nif (errors.length > 0) {\n  throw new Error('Validation failed: ' + errors.join('; '));\n}\n\nreturn [{\n  json: {\n    name: data.name.trim(),\n    email: data.email.trim().toLowerCase(),\n    company: (data.company || '').trim() || 'Not provided',\n    phone: (data.phone || '').trim() || null,\n    message: (data.message || '').trim() || null,\n    _sourceIp: data._sourceIp,\n    _userAgent: data._userAgent\n  }\n}];"
+      },
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        608
+      ],
+      "id": "3bf5ce73-84df-4448-8bf1-962cff632c56"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "lead_id",
+              "value": "={{ \"LD-\" + Math.random().toString(36).slice(2,6).toUpperCase() + \"-\" + Date.now().toString(36).toUpperCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "status",
+              "value": "new",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "source",
+              "value": "webhook",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "follow_up_by",
+              "value": "={{ $now.plus({hours: 24}).toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "a6",
+              "name": "email_domain",
+              "value": "={{ $json.email.split(\"@\")[1] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "name": "Enrich Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        896,
+        608
+      ],
+      "id": "c80a3604-61d5-4d3a-bfcb-7da96b7905a6"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert B2B lead qualification AI. Analyze this lead and respond ONLY with a valid JSON object. No markdown, no explanation, no code blocks, no text before or after the JSON.\n\nLead Data:\n- Name: {{ $json.name }}\n- Email: {{ $json.email }}\n- Company: {{ $json.company }}\n- Phone: {{ $json.phone }}\n- Message: {{ $json.message }}\n- Domain: {{ $json.email_domain }}\n\nRespond with EXACTLY this JSON structure:\n{\"score\": <1-10>, \"tier\": \"<enterprise|smb|consumer>\", \"priority\": \"<critical|high|medium|low>\", \"urgency\": <true|false>, \"urgency_signals\": \"<signals or empty>\", \"industry\": \"<industry>\", \"summary\": \"<1-2 sentence summary>\", \"action\": \"<recommended action>\", \"deal_size\": \"<estimated deal size>\"}\n\nSCORING:\n- 8-10 = enterprise: Fortune 500, 200+ employees, budget >100k, C-level, urgent timeline\n- 5-7 = smb: 10-200 employees, budget 5k-100k, manager-level\n- 1-4 = consumer: individual/freelancer, consumer email (gmail/yahoo/hotmail), no budget, personal use\n\nTIER MUST MATCH SCORE: enterprise if score>=8, smb if 5-7, consumer if <=4\n\nOUTPUT ONLY THE JSON OBJECT. NOTHING ELSE.",
+        "options": {
+          "systemMessage": "You are a JSON-only lead qualification bot. You MUST respond with ONLY a raw JSON object. Never use markdown. Never add explanations. Only output valid JSON."
+        }
+      },
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1120,
+        608
+      ],
+      "id": "23c1b46b-012b-40d6-b03e-54cb63d22b07"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1136,
+        832
+      ],
+      "id": "4516e8d3-10c9-4f77-81e6-13c7339f9d66",
+      "credentials": {
+        "openAiApi": {
+          "id": "WyKwN0iqfLgcw2d7",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.email_domain || \"default\" }}"
+      },
+      "name": "Postgres Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        832
+      ],
+      "id": "e33f42db-f246-4c13-b7d6-4bbc7b350cde",
+      "credentials": {
+        "postgres": {
+          "id": "0dx2ntQfiHFAwHM6",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const enriched = $node[\"Enrich Data\"].json;\nconst aiRaw = $input.first().json.output || '';\n\nlet ai = {};\ntry {\n  const jsonMatch = aiRaw.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) ai = JSON.parse(jsonMatch[0]);\n} catch(e) {\n  ai = { score: 5, tier: 'consumer', priority: 'medium', urgency: false, summary: 'AI parsing failed — manual review needed' };\n}\n\nconst email = enriched.email || '';\nconst consumerDomains = ['gmail.com','yahoo.com','hotmail.com','outlook.com','aol.com','icloud.com','protonmail.com','live.com','me.com'];\nconst domain = email.split('@')[1] || '';\nconst isConsumerEmail = consumerDomains.includes(domain);\n\nif (!ai.tier) {\n  ai.tier = isConsumerEmail ? 'consumer' : (ai.score >= 7 ? 'enterprise' : 'smb');\n}\n\nlet replySubject, replyBody;\nif (ai.tier === 'enterprise') {\n  replySubject = 'Your Enterprise Inquiry — ' + enriched.company;\n  replyBody = '<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;border-left:4px solid #e53e3e;\"><h2 style=\"color:#1a365d;\">Thank you, ' + enriched.name + '!</h2><p>We received your enterprise inquiry and our <strong>dedicated account team</strong> is already reviewing your requirements.</p><p>Given the scope of your needs at <strong>' + enriched.company + '</strong>, you have been assigned <strong>priority handling</strong>.</p><p>You can expect a personal response within <strong>2 business hours</strong>.</p><hr style=\"border:none;border-top:1px solid #e2e8f0;margin:20px 0;\"><p style=\"font-size:13px;color:#718096;\">Reference: ' + enriched.lead_id + ' | Priority: ' + (ai.priority || 'high') + '</p></div>';\n} else if (ai.tier === 'smb') {\n  replySubject = 'Thanks for reaching out, ' + enriched.name + '!';\n  replyBody = '<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;border-left:4px solid #3182ce;\"><h2 style=\"color:#2b6cb0;\">Hi ' + enriched.name + '!</h2><p>Thanks for getting in touch! We love working with growing businesses like <strong>' + enriched.company + '</strong>.</p><p>Our solutions team will review your inquiry and reach out within <strong>24 hours</strong>.</p><p>Reply to this email with any additional details about your needs.</p><hr style=\"border:none;border-top:1px solid #e2e8f0;margin:20px 0;\"><p style=\"font-size:13px;color:#718096;\">Reference: ' + enriched.lead_id + '</p></div>';\n} else {\n  replySubject = 'Thanks for your interest, ' + enriched.name + '!';\n  replyBody = '<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;border-left:4px solid #38a169;\"><h2 style=\"color:#38a169;\">Hey ' + enriched.name + '!</h2><p>Thanks for reaching out! We are glad you are interested.</p><p>Our team will get back to you within <strong>48 hours</strong>.</p><hr style=\"border:none;border-top:1px solid #e2e8f0;margin:20px 0;\"><p style=\"font-size:13px;color:#718096;\">Reference: ' + enriched.lead_id + '</p></div>';\n}\n\nreturn [{\n  json: {\n    lead_id: enriched.lead_id,\n    name: enriched.name,\n    email: enriched.email,\n    company: enriched.company,\n    phone: enriched.phone,\n    message: enriched.message,\n    email_domain: enriched.email_domain,\n    timestamp: enriched.timestamp,\n    status: enriched.status,\n    source: enriched.source,\n    follow_up_by: enriched.follow_up_by,\n    source_ip: enriched._sourceIp,\n    ai_score: ai.score || 5,\n    ai_tier: ai.tier || 'consumer',\n    ai_priority: ai.priority || 'medium',\n    ai_urgency: ai.urgency || false,\n    ai_urgency_signals: Array.isArray(ai.urgency_signals) ? ai.urgency_signals.join(', ') : '',\n    ai_industry: ai.industry_guess || 'Unknown',\n    ai_summary: ai.summary || 'No summary available',\n    ai_action: ai.recommended_action || 'Follow up via email',\n    ai_deal_size: ai.estimated_deal_size || 'unknown',\n    _replySubject: replySubject,\n    _replyBody: replyBody,\n    _isDuplicate: false,\n    _previousLeadId: null\n  }\n}];"
+      },
+      "name": "Parse & Merge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        608
+      ],
+      "id": "3811975e-2349-4a83-889e-0aba7961ff69"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO leads (lead_id, name, email, company, phone, message, email_domain, ai_score, ai_tier, ai_priority, ai_urgency, ai_urgency_signals, ai_industry, ai_summary, ai_action, ai_deal_size, status, source, source_ip, timestamp, follow_up_by) VALUES ('{{ $json.lead_id }}', '{{ $json.name }}', '{{ $json.email }}', '{{ $json.company }}', '{{ $json.phone }}', '{{ $json.message }}', '{{ $json.email_domain }}', {{ $json.ai_score }}, '{{ $json.ai_tier }}', '{{ $json.ai_priority }}', {{ $json.ai_urgency }}, '{{ $json.ai_urgency_signals }}', '{{ $json.ai_industry }}', '{{ $json.ai_summary }}', '{{ $json.ai_action }}', '{{ $json.ai_deal_size }}', '{{ $json.status }}', '{{ $json.source }}', '{{ $json.source_ip }}', '{{ $json.timestamp }}', '{{ $json.follow_up_by }}') ON CONFLICT (lead_id) DO NOTHING;",
+        "additionalFields": {}
+      },
+      "name": "Save to Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        1696,
+        416
+      ],
+      "id": "10fe6c5e-ef8e-4ae7-8acd-7d189dae90df",
+      "credentials": {
+        "postgres": {
+          "id": "0dx2ntQfiHFAwHM6",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1ofOSpYp8Jyf2vHKp1Sz_Q3wa0UwC6zVWRaD9PQtsZQw",
+          "mode": "list",
+          "cachedResultName": "tae",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ofOSpYp8Jyf2vHKp1Sz_Q3wa0UwC6zVWRaD9PQtsZQw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1279594282,
+          "mode": "list",
+          "cachedResultName": "leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ofOSpYp8Jyf2vHKp1Sz_Q3wa0UwC6zVWRaD9PQtsZQw/edit#gid=1279594282"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json.lead_id }}",
+            "name": "={{ $json.name }}",
+            "email": "={{ $json.email }}",
+            "company": "={{ $json.company }}",
+            "phone": "={{ $json.phone }}",
+            "message": "={{ $json.message }}",
+            "email_domain": "={{ $json.email_domain }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "status": "={{ $json.status }}",
+            "source": "={{ $json.source }}",
+            "follow_up_by": "={{ $json.follow_up_by }}",
+            "source_ip": "={{ $json.source_ip }}",
+            "ai_score": "={{ $json.ai_score }}",
+            "ai_tier": "={{ $json.ai_tier }}",
+            "ai_priority": "={{ $json.ai_priority }}",
+            "ai_urgency": "={{ $json.ai_urgency }}",
+            "ai_industry": "={{ $json.ai_industry }}",
+            "ai_summary": "={{ $json.ai_summary }}",
+            "ai_action": "={{ $json.ai_action }}",
+            "ai_deal_size": "={{ $json.ai_deal_size }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_domain",
+              "displayName": "email_domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "follow_up_by",
+              "displayName": "follow_up_by",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_ip",
+              "displayName": "source_ip",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_score",
+              "displayName": "ai_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_tier",
+              "displayName": "ai_tier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_priority",
+              "displayName": "ai_priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_urgency",
+              "displayName": "ai_urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_industry",
+              "displayName": "ai_industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_summary",
+              "displayName": "ai_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_action",
+              "displayName": "ai_action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_deal_size",
+              "displayName": "ai_deal_size",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Log to Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1696,
+        608
+      ],
+      "id": "d11dc28f-2bf8-4e44-8316-a2bae5da402c",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ivPUCSdGw6qKtyit",
+          "name": "Google Sheets account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0A7SBBU7ED",
+          "mode": "list",
+          "cachedResultName": "hot"
+        },
+        "text": "=:dart: *New {{ $json.ai_tier.toUpperCase() }} Lead* (Score: {{ $json.ai_score }}/10)\n━━━━━━━━━━━━━━━━━━━━━\n*Name:* {{ $json.name }}\n*Email:* {{ $json.email }}\n*Company:* {{ $json.company }}\n*Phone:* {{ $json.phone || \"N/A\" }}\n*Message:* {{ $json.message || \"N/A\" }}\n━━━━━━━━━━━━━━━━━━━━━\n:bar_chart: *AI Qualification:*\n- Score: {{ $json.ai_score }}/10 | Priority: {{ $json.ai_priority }}\n- Tier: {{ $json.ai_tier }} | Deal Size: {{ $json.ai_deal_size }}\n- Industry: {{ $json.ai_industry }}\n- Urgency: {{ $json.ai_urgency ? \"YES\" : \"No\" }}\n- Summary: {{ $json.ai_summary }}\n- Action: {{ $json.ai_action }}\n━━━━━━━━━━━━━━━━━━━━━\n:id: {{ $json.lead_id }} | Duplicate: {{ $json._isDuplicate ? \"Yes (prev: \" + $json._previousLeadId + \")\" : \"No — first submission\" }}",
+        "otherOptions": {}
+      },
+      "name": "Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1696,
+        992
+      ],
+      "id": "b8df0bfa-9670-4e4a-b0cf-e46412edf880",
+      "webhookId": "84824973-c5d3-46d9-a3a3-fc8c42d8d579",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "MGFVubXNngjZW63m",
+          "name": "Slack account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "check-enterprise",
+              "leftValue": "={{ $json.ai_tier }}",
+              "rightValue": "enterprise",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fab9d5cd-56fe-41fc-b66a-c78a5245bd66",
+      "name": "IF Enterprise",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1696,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "luistonido09@gmail.com",
+        "subject": "=Enterprise Lead: {{ $json.name }} from {{ $json.company }} (Score: {{ $json.ai_score }}/10)",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:650px;margin:0 auto;padding:20px;background:#f7fafc;border-left:4px solid #e53e3e;\"><h2 style=\"color:#1a202c;margin-top:0;\">High-Value Enterprise Lead</h2><table style=\"width:100%;border-collapse:collapse;\"><tr><td style=\"padding:6px 12px;font-weight:bold;\">Name</td><td>{{ $json.name }}</td></tr><tr style=\"background:#edf2f7;\"><td style=\"padding:6px 12px;font-weight:bold;\">Email</td><td>{{ $json.email }}</td></tr><tr><td style=\"padding:6px 12px;font-weight:bold;\">Company</td><td>{{ $json.company }}</td></tr><tr style=\"background:#edf2f7;\"><td style=\"padding:6px 12px;font-weight:bold;\">Phone</td><td>{{ $json.phone || \"N/A\" }}</td></tr><tr><td style=\"padding:6px 12px;font-weight:bold;\">Message</td><td>{{ $json.message || \"N/A\" }}</td></tr></table><hr style=\"border:none;border-top:2px solid #e53e3e;margin:16px 0;\"><h3>AI Qualification</h3><ul><li>Score: {{ $json.ai_score }}/10 — {{ $json.ai_priority }}</li><li>Industry: {{ $json.ai_industry }}</li><li>Deal Size: {{ $json.ai_deal_size }}</li><li>Urgency: {{ $json.ai_urgency ? \"YES\" : \"No\" }}</li><li>Summary: {{ $json.ai_summary }}</li><li>Action: {{ $json.ai_action }}</li></ul><p style=\"font-size:12px;color:#a0aec0;\">Lead ID: {{ $json.lead_id }}</p></div>",
+        "options": {}
+      },
+      "name": "Gmail VP Alert",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        416
+      ],
+      "id": "0db64b9b-3153-45e8-b087-c9812d79d693",
+      "webhookId": "0e7fb825-2dfc-4a7a-94bd-d7fb6b10cee9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1Ca7QdsQvBPsN22H",
+          "name": "Gmail account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json._replySubject }}",
+        "message": "={{ $json._replyBody }}",
+        "options": {}
+      },
+      "name": "Auto-Reply Enterprise",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        608
+      ],
+      "id": "60d8f413-6eae-40a9-bc20-0fc610de1ac6",
+      "webhookId": "ce93a425-79c9-45ec-8624-16c14941286f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1Ca7QdsQvBPsN22H",
+          "name": "Gmail account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: \"success\", type: \"enterprise_lead\", lead_id: $json.lead_id, name: $json.name, company: $json.company, ai_score: $json.ai_score, ai_priority: $json.ai_priority, ai_tier: $json.ai_tier, ai_summary: $json.ai_summary, ai_urgency: $json.ai_urgency, recommended_action: $json.ai_action, follow_up_by: $json.follow_up_by, duplicate: $json._isDuplicate }) }}",
+        "options": {}
+      },
+      "name": "Enterprise Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        800
+      ],
+      "id": "9f608e98-d7f6-432b-9909-a31fdcd8c75e"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json._replySubject }}",
+        "message": "={{ $json._replyBody }}",
+        "options": {}
+      },
+      "name": "Auto-Reply SMB",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2208,
+        688
+      ],
+      "id": "2730a805-d385-4d3d-aad3-ea428cb0ee12",
+      "webhookId": "edef8020-e611-406e-9d49-fe36c10f3e06",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1Ca7QdsQvBPsN22H",
+          "name": "Gmail account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: \"success\", type: \"smb_lead\", lead_id: $json.lead_id, name: $json.name, company: $json.company, ai_score: $json.ai_score, ai_priority: $json.ai_priority, ai_tier: $json.ai_tier, ai_summary: $json.ai_summary, recommended_action: $json.ai_action, follow_up_by: $json.follow_up_by, duplicate: $json._isDuplicate }) }}",
+        "options": {}
+      },
+      "name": "SMB Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        2208,
+        896
+      ],
+      "id": "dba32a2b-4b72-4e27-b0f2-51b9f9b48c1d"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json._replySubject }}",
+        "message": "={{ $json._replyBody }}",
+        "options": {}
+      },
+      "name": "Auto-Reply Consumer",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2208,
+        1088
+      ],
+      "id": "b58631d1-3f28-4216-a6eb-6630db581d69",
+      "webhookId": "d2a5d7a2-348e-41a8-b644-cf7ec9a4c7ec",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1Ca7QdsQvBPsN22H",
+          "name": "Gmail account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: \"success\", type: \"consumer_lead\", lead_id: $json.lead_id, name: $json.name, company: $json.company, ai_score: $json.ai_score, ai_priority: $json.ai_priority, ai_tier: $json.ai_tier, ai_summary: $json.ai_summary, recommended_action: $json.ai_action, follow_up_by: $json.follow_up_by, duplicate: $json._isDuplicate }) }}",
+        "options": {}
+      },
+      "name": "Consumer Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        2208,
+        1280
+      ],
+      "id": "a439ea0e-f8b4-48a0-a68a-b842eca96ee3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "check-smb",
+              "leftValue": "={{ $json.ai_tier }}",
+              "rightValue": "smb",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "228f33da-5110-4391-8df5-7cf9728447d2",
+      "name": "IF SMB",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1920,
+        992
+      ]
+    },
+    {
+      "parameters": {
+        "content": "🛡️ SECURITY LAYER\n\nFirst line of defense:\n- Webhook receives all incoming requests\n- Spam Detection filters bad actors\n- IF Spam routes to auto-reject\n- Only legitimate requests proceed",
+        "height": 600,
+        "width": 860,
+        "color": 5
+      },
+      "id": "sticky-fixed-1771303891753-0",
+      "name": "Sticky: 🛡️ SECURITY LAYER",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "content": "⚙️ DATA PROCESSING\n\nPrepares data for AI:\n- Validates all required fields\n- Enriches with additional context\n- Formats data for AI Agent\n- Ensures data quality",
+        "height": 600,
+        "width": 380
+      },
+      "id": "sticky-fixed-1771303891753-1",
+      "name": "Sticky: ⚙️ DATA PROCESSING",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        656,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "content": "🤖 AI BRAIN\n\nCore intelligence layer:\n- OpenAI processes the request\n- Postgres stores conversation memory\n- Context-aware responses\n- Remembers past interactions",
+        "height": 712,
+        "width": 412,
+        "color": 5
+      },
+      "id": "sticky-fixed-1771303891753-2",
+      "name": "Sticky: 🤖 AI BRAIN",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "content": "🔄 RESPONSE PARSING\n\nProcesses AI output:\n- Extracts key information\n- Formats for different channels\n- Merges data streams\n- Prepares for routing",
+        "height": 712,
+        "width": 204,
+        "color": 6
+      },
+      "id": "sticky-fixed-1771303891753-3",
+      "name": "Sticky: 🔄 RESPONSE PARSING",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1456,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "content": "📊 DATA LOGGING\n\nRecords everything:\n- Postgres: Full conversation history\n- Google Sheets: Analytics dashboard\n- Slack: Real-time team alerts\n- Complete audit trail",
+        "height": 584,
+        "width": 252,
+        "color": 2
+      },
+      "id": "sticky-fixed-1771303891753-4",
+      "name": "Sticky: 📊 DATA LOGGING",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1664,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n🔀 SMART ROUTING\n\n3-tier customer routing:\n- Enterprise: Premium treatment\n- SMB: Business response\n- Consumer: Standard flow\n- Personalized for each segment",
+        "height": 568,
+        "width": 460,
+        "color": 4
+      },
+      "id": "sticky-fixed-1771303891753-5",
+      "name": "Sticky: 🔀 SMART ROUTING",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1648,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "content": "👔 ENTERPRISE PATH\n\nVIP treatment:\n- Gmail VP Alert (executive notified!)\n- Auto-Reply Enterprise (premium template)\n- Highest priority handling\n- Dedicated account response",
+        "height": 616,
+        "width": 188,
+        "color": 6
+      },
+      "id": "sticky-fixed-1771303891753-6",
+      "name": "Sticky: 👔 ENTERPRISE PATH",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n👤 CONSUMER PATH\n\nStandard response:\n- Auto-Reply Consumer template\n- Friendly tone\n- Self-service options included\n- Support resources attached",
+        "height": 600,
+        "width": 460,
+        "color": 7
+      },
+      "id": "sticky-fixed-1771303891753-8",
+      "name": "Sticky: 👤 CONSUMER PATH",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2112,
+        992
+      ]
+    },
+    {
+      "parameters": {
+        "content": "📋 AI CUSTOMER RESPONSE SYSTEM v1.0\n\nIntelligent multi-tier response automation\nFeatures: Spam protection, AI memory, \n3-tier routing, multi-channel notifications\nBuilt with: n8n + OpenAI + Postgres + Gmail + Slack",
+        "height": 168,
+        "width": 380,
+        "color": 7
+      },
+      "id": "sticky-fixed-1771303891753-9",
+      "name": "Sticky: 📋 AI CUSTOMER RESPONSE SYSTEM v1.0",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1088,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "content": "🏢 SMB PATH\n\nBusiness response:\n- Auto-Reply Consumer template\n- Friendly tone\n- Self-service options included\n- Support resources attached",
+        "height": 568,
+        "width": 460,
+        "color": 6
+      },
+      "id": "ec06429b-553c-45ee-ad99-5490abfe6585",
+      "name": "Sticky: 👔 ENTERPRISE PATH1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2112,
+        464
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Spam Detection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spam Detection": {
+      "main": [
+        [
+          {
+            "node": "IF Spam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Spam": {
+      "main": [
+        [
+          {
+            "node": "Spam Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Enrich Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich Data": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse & Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Merge": {
+      "main": [
+        [
+          {
+            "node": "Save to Postgres",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Enterprise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Enterprise": {
+      "main": [
+        [
+          {
+            "node": "Gmail VP Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Auto-Reply Enterprise",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Enterprise Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF SMB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF SMB": {
+      "main": [
+        [
+          {
+            "node": "Auto-Reply SMB",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SMB Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Auto-Reply Consumer",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Consumer Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "274042c6-d955-48dc-aca5-e4d3f91593e6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "37a7efe6bc78c57f88daf9bb000ecfd013a6e39659a449d31385fe6842e1c86d"
+  },
+  "id": "7RVndPfoFwXUxLxA",
+  "tags": []
+}
