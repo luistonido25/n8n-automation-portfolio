@@ -59,7 +59,8 @@ An intelligent automation system that:
 <table>
   <tr>
     <td width="100%">
-      <img width="1800" height="900" alt="AI Lead Capture Workflow" src="YOUR_WORKFLOW_IMAGE_LINK_HERE" />
+      <img width="1800" height="900" alt="AI Lead Capture Workflow" src="<img width="1287" height="763" alt="myworkflow#3" src="https://github.com/user-attachments/assets/e3883c9b-3495-4f5f-9953-399fd913f19b" />
+" />
       <p align="center"><b>Full AI Lead Capture & Qualification Workflow (n8n)</b></p>
     </td>
   </tr>
@@ -279,3 +280,4 @@ Architecture patterns may be referenced but not deployed commercially as-is.
 <p align="center">
   <a href="#-project-overview">Back to Top ↑</a>
 </p>
+
