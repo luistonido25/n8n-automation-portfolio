@@ -1,43 +1,52 @@
 # 🤖 AI Lead Capture & Qualification System
 
-> **Portfolio Project:** Intelligent AI-driven lead intake automation demonstrating secure workflow design, structured data engineering, smart routing logic, and real-time sales intelligence.
+> **Portfolio Project:** Intelligent AI-powered lead intake automation demonstrating secure workflow architecture, structured data engineering, smart routing logic, and real-time sales intelligence.
 
 [![Portfolio](https://img.shields.io/badge/Portfolio-View_More-764ba2?style=for-the-badge&logo=react)](https://luistonido-portfolio.netlify.app/)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/luis-carlos-tonido-971229193)
+[![Built with n8n](https://img.shields.io/badge/Built%20With-n8n-ef6c00?style=for-the-badge&logo=n8n)](https://n8n.io)
 
 ---
 
 ## 📖 Project Overview
 
-This project showcases my ability to design and implement complex AI-powered automation workflows that solve real business problems. Built entirely with no-code tools, it demonstrates skills in:
+This project showcases my ability to design and implement a **secure, AI-driven lead capture and qualification system** using modern no-code automation tools.
 
-- **Workflow Architecture** - Designing modular, scalable, and error-resistant automation systems  
-- **AI Integration** - Leveraging OpenAI for structured lead scoring & classification  
-- **Data Engineering** - Building normalized lead databases with tracking & analytics  
-- **API Integration** - Connecting Slack, Gmail, Postgres, and Sheets seamlessly  
-- **Security Layering** - Spam detection and validation before AI execution  
-- **Business Logic Design** - Tier-based routing for Enterprise, SMB, and Consumer leads  
+Built entirely with workflow automation, this system processes inbound leads in real-time, filters spam, enriches structured data, applies AI scoring logic, and routes prospects based on business priority.
+
+### Skills Demonstrated
+
+- **Workflow Architecture** – Modular, scalable, fault-tolerant automation design  
+- **AI Integration** – Structured lead scoring using OpenAI  
+- **Security Layering** – Spam detection + validation before AI execution  
+- **Data Engineering** – Postgres + Google Sheets structured logging  
+- **Smart Routing Logic** – Enterprise / SMB / Consumer segmentation  
+- **Real-Time Alerts** – Slack notifications + Gmail VIP escalation  
 
 ---
 
 ## 🎯 The Challenge
 
-Growing businesses face a critical problem: **manual lead qualification is slow, inconsistent, and unstructured**.
+Most growing businesses struggle with:
 
-Enterprise-level prospects often receive the same response as low-value inquiries. Without structured scoring and routing, high-value opportunities are delayed or missed entirely.
+- Manual lead review  
+- No standardized qualification process  
+- Slow response times  
+- No prioritization for high-value prospects  
+- Lack of structured analytics  
 
-This project automates the entire process end-to-end.
+Result: **Missed opportunities and lost revenue.**
 
 ---
 
 ## 💡 The Solution
 
-An intelligent system that:
+An intelligent automation system that:
 
-- **Captures** inbound leads via webhook in real-time  
+- **Captures** inbound leads via webhook  
 - **Filters** spam before processing  
 - **Validates & enriches** incoming data  
-- **Analyzes** lead intent using AI (OpenAI Chat Model)  
+- **Analyzes** lead intent using OpenAI  
 - **Scores & classifies** leads automatically  
 - **Routes** leads into Enterprise / SMB / Consumer paths  
 - **Logs** structured data to Postgres & Google Sheets  
@@ -45,9 +54,7 @@ An intelligent system that:
 
 ---
 
-## 🎬 See It In Action
-
-### Workflow Architecture
+## 📸 Screenshots
 
 <table>
   <tr>
@@ -67,40 +74,27 @@ An intelligent system that:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                      SECURITY LAYER                          │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │  Webhook     │───▶│ Spam Detect  │───▶│  IF Spam     │  │
-│  │  Trigger     │    │              │    │  Stop Flow   │  │
-│  └──────────────┘    └──────────────┘    └──────────────┘  │
-└────────────┬───────────────────────────────────────────────┘
-             ▼
+│  Webhook → Spam Detection → IF Spam → Stop                  │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │                  DATA PROCESSING LAYER                       │
-│  ┌──────────────┐    ┌──────────────┐                       │
-│  │ Validate     │───▶│ Enrich Data  │                       │
-│  │ Input        │    │              │                       │
-│  └──────────────┘    └──────────────┘                       │
-└────────────┬───────────────────────────────────────────────┘
-             ▼
+│  Validate Input → Enrich Data                               │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │                AI QUALIFICATION LAYER                        │
-│  ┌──────────────┐    ┌──────────────┐                       │
-│  │ OpenAI       │───▶│ Parse &      │                       │
-│  │ Chat Model   │    │ Structure    │                       │
-│  └──────────────┘    └──────────────┘                       │
-└────────────┬───────────────────────────────────────────────┘
-             ▼
+│  OpenAI Chat Model → Structured JSON Output                 │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│                   DATA STORAGE LAYER                         │
-│  ┌──────────────┐    ┌──────────────┐                       │
-│  │  Postgres    │    │ Google       │                       │
-│  │  Database    │    │ Sheets       │                       │
-│  └──────────────┘    └──────────────┘                       │
-└────────────┬───────────────────────────────────────────────┘
-             ▼
+│                     DATA STORAGE LAYER                       │
+│  Postgres Database + Google Sheets                          │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │                    SMART ROUTING LAYER                       │
-│  Enterprise │ SMB │ Consumer                                 │
-│  VIP Alert  │ Biz │ Standard                                 │
+│  Enterprise | SMB | Consumer                                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -113,84 +107,96 @@ An intelligent system that:
 | **Orchestration** | n8n | Workflow automation & routing |
 | **Database** | Postgres | Structured lead storage |
 | **Reporting** | Google Sheets | Dashboard & tracking |
-| **AI** | OpenAI Chat Model | Lead scoring & qualification |
+| **AI Engine** | OpenAI Chat Model | Lead scoring & classification |
 | **Notifications** | Slack API | Real-time alerts |
-| **Email** | Gmail API | VIP lead escalation |
+| **Email Escalation** | Gmail API | VIP lead notification |
 
 ---
 
-## 🎨 Key Features Demonstrated
+## 🧠 AI Output Schema
 
-### 1. Intelligent Workflow Design
-
-**Challenge:** Process leads efficiently without workflow interruption.
-
-**Solution:** Modular architecture with conditional routing:
-- Spam filtered before AI execution  
-- Validation before enrichment  
-- Structured parsing before logging  
-- Error isolation prevents total failure  
-
----
-
-### 2. AI Integration & Structured Prompting
-
-**Challenge:** Ensure consistent and machine-readable AI outputs.
-
-**Solution:** Strict JSON schema enforcement:
+Example structured AI response:
 
 ```json
 {
-  "ai_score": number,
-  "ai_tier": "Enterprise|SMB|Consumer",
-  "ai_priority": "Low|Medium|High",
-  "ai_urgency": "Low|Medium|Immediate",
-  "ai_summary": "text",
-  "ai_action": "text",
-  "ai_deal_size": "Low|Medium|High"
+  "ai_score": 92,
+  "ai_tier": "Enterprise",
+  "ai_priority": "High",
+  "ai_urgency": "Immediate",
+  "ai_industry": "SaaS",
+  "ai_summary": "Enterprise SaaS company requesting automation consulting",
+  "ai_action": "Escalate to senior sales",
+  "ai_deal_size": "High"
 }
 ```
 
-Result: 99% valid structured outputs, enabling reliable automation.
+---
+
+## 🔐 Security Layer Example (n8n Function Node)
+
+```javascript
+// Basic spam detection logic
+const spamKeywords = ["crypto", "free money", "investment scheme"];
+
+const message = $json.message.toLowerCase();
+
+const isSpam = spamKeywords.some(keyword => 
+  message.includes(keyword)
+);
+
+return {
+  ...$json,
+  is_spam: isSpam
+};
+```
 
 ---
 
-### 3. Tier-Based Smart Routing
+## 🧩 AI Prompt Structure
 
-```
-Enterprise (High Score)
-   ├── Gmail VIP Alert
-   ├── High-Priority Slack Notification
-   └── Executive-Level Response
+```javascript
+const prompt = `
+You are a lead qualification assistant.
 
-SMB
-   ├── Business Template Reply
-   └── Standard Slack Notification
+Analyze the lead details and return ONLY valid JSON with this structure:
 
-Consumer
-   └── Automated Standard Response
+{
+  "ai_score": number (0-100),
+  "ai_tier": "Enterprise" | "SMB" | "Consumer",
+  "ai_priority": "Low" | "Medium" | "High",
+  "ai_urgency": "Low" | "Medium" | "Immediate",
+  "ai_industry": "text",
+  "ai_summary": "text",
+  "ai_action": "text",
+  "ai_deal_size": "Low" | "Medium" | "High"
+}
+
+Lead Data:
+Name: ${$json.name}
+Company: ${$json.company}
+Message: ${$json.message}
+`;
 ```
 
 ---
 
-### 4. Secure & Observable Logging
+## 🚦 Smart Routing Example
 
-Every lead is:
-- Logged in Postgres
-- Tracked in Google Sheets
-- Timestamped
-- Fully auditable
+```javascript
+if ($json.ai_tier === "Enterprise") {
+  return [{ route: "enterprise" }];
+}
 
-Provides foundation for:
-- CRM integration
-- Conversion tracking
-- Sales analytics
+if ($json.ai_tier === "SMB") {
+  return [{ route: "smb" }];
+}
+
+return [{ route: "consumer" }];
+```
 
 ---
 
 ## 📊 Technical Achievements
-
-### Performance Metrics
 
 | Metric | Result |
 |--------|--------|
@@ -198,29 +204,29 @@ Provides foundation for:
 | **AI Response Time** | <2 seconds |
 | **Spam Filtering Accuracy** | 95%+ |
 | **Structured Output Reliability** | 99% |
-| **Workflow Continuity** | 100% (isolated errors) |
+| **Workflow Continuity** | 100% (error isolation) |
 
 ---
 
 ## 🚀 Project Evolution
 
-### Version 1.0 (MVP)
-- Basic lead capture
-- Manual qualification
+### Version 1.0
+- Basic lead capture  
+- Manual qualification  
 
 ### Version 2.0 (Current)
-- AI scoring & tier classification
-- Spam detection
-- Structured logging
-- Smart routing logic
-- Real-time alerts
+- AI scoring & tier classification  
+- Spam detection  
+- Structured database logging  
+- Multi-tier routing  
+- Real-time notifications  
 
 ### Version 3.0 (Planned)
-- CRM auto-sync
-- Auto calendar booking
-- Predictive scoring
-- Multilingual AI support
-- SLA-based escalation
+- CRM auto-sync (HubSpot / Salesforce)  
+- Automated calendar booking  
+- Predictive lead scoring  
+- Multilingual AI responses  
+- SLA-based auto escalation  
 
 ---
 
@@ -228,46 +234,45 @@ Provides foundation for:
 
 This architecture can be adapted for:
 
-- Sales lead intake & qualification
-- Support ticket triage
-- Recruitment screening automation
-- Enterprise inquiry routing
-- Customer escalation systems
-- Automated onboarding workflows
+- Sales lead qualification  
+- Support ticket triage  
+- Recruitment application screening  
+- Complaint escalation systems  
+- Enterprise inquiry routing  
 
 ---
 
 ## 💼 About This Project
 
-This is a **portfolio demonstration project** built to showcase:
+This is a **portfolio demonstration system** designed to showcase:
 
-- Advanced automation architecture
-- AI integration in real workflows
-- Secure processing pipelines
-- Business intelligence layering
-- Scalable system design
+- AI workflow engineering  
+- Business automation logic  
+- Secure system architecture  
+- Real-time lead intelligence  
 
-**Note:** This is a proof-of-concept and not a production SaaS deployment.
+It is a proof-of-concept and not deployed as production SaaS.
 
 ---
 
 ## 👨‍💻 About Me
 
-LUIS CARLOS J. TONIDO - Automation & AI Integration Specialist
+**LUIS CARLOS J. TONIDO**  
+Automation & AI Integration Specialist  
 
-I build intelligent automation systems that solve real business problems using AI-powered workflows and structured decision logic.
+I design intelligent automation systems that transform manual business processes into scalable AI-powered workflows.
 
 ---
 
 ## 📄 License
 
-Shared for **portfolio purposes**.  
+Shared for portfolio purposes.  
 Architecture patterns may be referenced but not deployed commercially as-is.
 
 ---
 
 <p align="center">
-  <b>⭐ If you found this project interesting, please star it!</b><br>
+  <b>⭐ If you found this project interesting, consider starring it!</b><br>
   <sub>Built with ❤️ using intelligent automation</sub>
 </p>
 
